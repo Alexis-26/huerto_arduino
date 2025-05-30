@@ -1,5 +1,7 @@
 from pymongo import MongoClient
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 def conexion():
     try:
@@ -10,15 +12,13 @@ def conexion():
     except:
         print("Conexion Fallida")
 
-import pandas as pd
-
 def generar_dataframe(client):
     # Extracción de los datos de la base de datos con el nombre "lecturas"
     db = client["sensores_db"]
     collection = db["lecturas"]
 
     # Busqueda con filtro para no obtener la columna "_id"
-    resultados = collection.find({}, {"DHT.temp":1, "DHT.hum":1, "SOIL":1, "LDR":1, "timestamp":1, "_id":0})
+    resultados = collection.find({}, {"DHT.temp":1, "DHT.hum":1, "SOIL":1, "LDR":1, "PUMP":1, "timestamp":1, "_id":0})
     datos = list(resultados)
 
     # Convertir en dataframe
@@ -64,6 +64,42 @@ def verificar_calidad(df:pd.DataFrame):
 
     return df
 
+def columna_pump(df:pd.DataFrame):
+    # Añadir columna "pump_satus" si es 0 apagado, si es 1 encendido
+    df['pump_status'] = df['PUMP'].apply(lambda x: 'apagado' if x == 0 else 'encendido')
+    print(df)
+    return df
+
+def estadistica_basica(df:pd.DataFrame):
+    # Estadísticas básicas
+    # print("Estadísticas básicas:")
+    # print(df.describe())
+
+    # Estadísticas de la columna 'temp'
+    print("\nEstadísticas de la columna 'temp':")
+    print(df['temp'].describe())
+
+    # Estadísticas de la columna 'hum'
+    print("\nEstadísticas de la columna 'hum':")
+    print(df['hum'].describe())
+
+    # Estadísticas de la columna 'SOIL'
+    print("\nEstadísticas de la columna 'SOIL':")
+    print(df['SOIL'].describe())
+
+    # Estadísticas de la columna 'LDR'
+    print("\nEstadísticas de la columna 'LDR':")
+    print(df['LDR'].describe())
+    return df
+
+def eda(df:pd.DataFrame):
+    # Calcula matriz de correlación
+    corr = df[['temp', 'hum', 'SOIL', 'LDR', 'PUMP']].corr()
+
+    # Dibuja heatmap
+    sns.heatmap(corr, annot=True, cmap='coolwarm')
+    plt.title('Matriz de correlación')
+    plt.show(block=True)
 
 if __name__ == "__main__":
     conexion = conexion()
@@ -71,3 +107,6 @@ if __name__ == "__main__":
         df = generar_dataframe(conexion)
         df = transformacion_columnas(df)
         df = verificar_calidad(df)
+        df = columna_pump(df)
+        df = estadistica_basica(df)
+        df = eda(df)
